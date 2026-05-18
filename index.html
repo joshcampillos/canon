@@ -358,7 +358,8 @@
         { key: 'role', label: 'Role', placeholder: '—' },
         { key: 'age', label: 'Age / Era', placeholder: '—' },
         { key: 'theme', label: 'Theme', placeholder: '—' },
-        { key: 'mbti', label: 'MBTI', placeholder: '—' }
+        { key: 'mbti', label: 'MBTI', placeholder: '—' },
+        { key: 'faction', label: 'Faction', placeholder: '—' }
       ],
       sections: [
         { key: 'biography', label: 'Biography', placeholder: 'Who are they? Where do they come from?' },
@@ -605,6 +606,16 @@
     e.struct[key] = value;
     e.updated = Date.now();
     e.body = Object.values(e.struct).filter(Boolean).join('\n\n');
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(() => {
+      save();
+      renderSidebar();
+      const btn = document.querySelector('.action-btn.primary');
+      if (btn && btn.textContent === 'Save') {
+        btn.textContent = 'Saved';
+        setTimeout(() => btn.textContent = 'Save', 1200);
+      }
+    }, 1000);
   }
 
   function toggleFreeform() {
@@ -686,16 +697,29 @@ function toggleMarkdown() {
 
   function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  let _autoSaveTimer;
   function upd(field, value) {
     const e = entries.find(x => x.id === currentId);
     if (!e) return;
     const oldCat = e.category;
     e[field] = value; e.updated = Date.now();
-    if (field === 'title') { renderSidebar(); return; }
+    if (field === 'title') { renderSidebar(); }
     if (field === 'category' && oldCat !== value) {
       renderSidebar();
       openEntry(e.id);
+      return;
     }
+    // Autosave: write to localStorage 1s after last change, then sync to cloud
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(() => {
+      save();
+      renderSidebar();
+      const btn = document.querySelector('.action-btn.primary');
+      if (btn && btn.textContent === 'Save') {
+        btn.textContent = 'Saved';
+        setTimeout(() => btn.textContent = 'Save', 1200);
+      }
+    }, 1000);
   }
 
   function saveEntry() {
