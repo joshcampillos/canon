@@ -207,6 +207,30 @@
     select.action-btn { padding: 5px 24px 5px 10px; }
     .gallery-card { padding: 16px; }
   }
+
+  /* Structured templates */
+  .struct-template { padding: 0; }
+  .struct-header { padding: 24px 36px 16px; }
+  .struct-header-portrait { display: flex; align-items: flex-end; gap: 16px; height: 80px; background: var(--bg); margin: 0 -36px 16px; padding: 0 36px 16px; border-bottom: 1px solid var(--border); }
+  .struct-portrait { width: 56px; height: 56px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 22px; color: var(--text-secondary); margin-bottom: -28px; flex-shrink: 0; }
+  .struct-title { font-family: Georgia, serif; font-size: 22px; font-weight: 400; color: var(--text); padding-top: 30px; }
+  .struct-stats { padding: 0 36px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .struct-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .struct-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .struct-stat-input { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', -apple-system, sans-serif; font-size: 13px; color: var(--text); padding: 0; }
+  .struct-stat-input::placeholder { color: var(--text-dim); font-style: italic; }
+  .struct-sections { padding: 0 36px 40px; display: flex; flex-direction: column; gap: 20px; }
+  .struct-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 8px; }
+  .struct-section-textarea { width: 100%; background: transparent; border: none; outline: none; font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; line-height: 1.75; color: var(--text); resize: none; min-height: 24px; padding: 0; }
+  .struct-section-textarea::placeholder { color: var(--text-dim); font-style: italic; }
+  .struct-divider { margin: 0 36px 20px; border-top: 1px solid var(--border); }
+  .struct-mode-toggle { padding: 14px 36px 0; display: flex; justify-content: flex-end; }
+
+  @media (max-width: 768px) {
+    .struct-header, .struct-stats, .struct-sections { padding-left: 20px; padding-right: 20px; }
+    .struct-divider, .struct-mode-toggle { margin-left: 20px; margin-right: 20px; padding-left: 0; padding-right: 0; }
+    .struct-header-portrait { margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -324,6 +348,45 @@
       "What connects it to other places?",
       "Notes."
     ]
+  };
+
+  const STRUCT_TEMPLATES = {
+    Characters: {
+      hasPortrait: true,
+      stats: [
+        { key: 'role', label: 'Role', placeholder: '—' },
+        { key: 'age', label: 'Age / Era', placeholder: '—' },
+        { key: 'theme', label: 'Theme', placeholder: '—' },
+        { key: 'mbti', label: 'MBTI', placeholder: '—' }
+      ],
+      sections: [
+        { key: 'biography', label: 'Biography', placeholder: 'Who are they? Where do they come from?' },
+        { key: 'appearance', label: 'Appearance', placeholder: 'What do they look like — the first thing someone notices?' },
+        { key: 'personality', label: 'Personality', placeholder: 'Who are they in one sentence?' },
+        { key: 'ability', label: 'Enhancement / Ability', placeholder: 'What can they do that no one else can?' },
+        { key: 'arc', label: 'Arc', placeholder: 'Who are they becoming?' },
+        { key: 'relationships', label: 'Relationships', placeholder: 'Who matters to them and why?' },
+        { key: 'notes', label: 'Notes', placeholder: 'Anything else worth knowing.' }
+      ]
+    },
+    Factions: {
+      hasPortrait: false,
+      stats: [
+        { key: 'alignment', label: 'Alignment', placeholder: '—' },
+        { key: 'leader', label: 'Leader', placeholder: '—' },
+        { key: 'founded', label: 'Founded', placeholder: '—' },
+        { key: 'territory', label: 'Territory', placeholder: '—' }
+      ],
+      sections: [
+        { key: 'history', label: 'History', placeholder: 'How did this faction come to be?' },
+        { key: 'purpose', label: 'Purpose', placeholder: 'What do they stand for?' },
+        { key: 'cohesion', label: 'What holds them together', placeholder: 'Loyalty, fear, belief — what keeps them unified?' },
+        { key: 'goals', label: 'What they want', placeholder: 'What do they want that they don\'t have yet?' },
+        { key: 'enemies', label: 'Enemies', placeholder: 'Who are they against and why?' },
+        { key: 'members', label: 'Notable members', placeholder: 'Who defines this faction?' },
+        { key: 'notes', label: 'Notes', placeholder: 'Anything else worth knowing.' }
+      ]
+    }
   };
 
   const TRASH_SVG = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 14 4"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M6 7v5M10 7v5"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/></svg>';
@@ -560,8 +623,14 @@ function toggleMarkdown() {
   function upd(field, value) {
     const e = entries.find(x => x.id === currentId);
     if (!e) return;
+    const oldCat = e.category;
     e[field] = value; e.updated = Date.now();
     if (field === 'title') renderSidebar();
+    if (field === 'category' && oldCat !== value) {
+      const wasStruct = STRUCT_TEMPLATES[oldCat] && !e.freeform;
+      const isStruct = STRUCT_TEMPLATES[value] && !e.freeform;
+      if (wasStruct !== isStruct) openEntry(e.id);
+    }
   }
 
   function saveEntry() {
