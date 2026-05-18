@@ -555,10 +555,7 @@
 
   function renderStructTemplate(e, struct) {
     if (!e.struct) e.struct = {};
-    const initial = (e.title || '?')[0].toUpperCase();
-    const portrait = struct.hasPortrait
-      ? `<div class="struct-header-portrait"><div class="struct-portrait">${initial}</div></div>`
-      : '';
+    const portrait = '';
     const stats = struct.stats.map(s => `
       <div class="struct-stat">
         <div class="struct-stat-label">${s.label}</div>
