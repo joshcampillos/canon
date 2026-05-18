@@ -519,6 +519,8 @@
     const allCats = getAllCategories();
     const tl = `<button class="action-btn icon-btn ${viewMode==='list'?'active':''}" onclick="setView('list')">☰</button>`;
     const tg = `<button class="action-btn icon-btn ${viewMode==='gallery'?'active':''}" onclick="setView('gallery')">⊞</button>`;
+    const struct = STRUCT_TEMPLATES[e.category];
+    const useStruct = struct && !e.freeform;
 
     document.getElementById('mainArea').innerHTML = `
       <div class="main-toolbar">
@@ -527,7 +529,7 @@
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
           </button>
           <input class="entry-title-input" type="text" placeholder="Entry title…" value="${esc(e.title)}" oninput="upd('title',this.value)"/>
-          <select class="action-btn" onchange="upd('category',this.value);renderSidebar()">
+          <select class="action-btn" onchange="upd('category',this.value)">
             <option value="">Uncategorized</option>
             ${allCats.map(c => '<option value="' + c + '" ' + (e.category===c?'selected':'') + '>' + c + '</option>').join('')}
           </select>
@@ -540,13 +542,79 @@
         </div>
       </div>
       <div class="main-content" id="mainContent">
-<div class="markdown-toolbar">
-          <span class="md-spacer"></span>
-          <button class="markdown-toggle" id="markdownToggle" onclick="toggleMarkdown()">${e.preview ? 'Edit' : 'Preview'}</button>
-        </div>
-        <textarea class="entry-body ${e.preview ? 'hidden' : ''}" id="entryBody" placeholder="Write here…" oninput="upd('body',this.value);updateStarterVisibility()">${esc(e.body||'')}</textarea>
-        <div class="markdown-preview ${e.preview ? '' : 'hidden'}" id="markdownPreview">${renderMarkdown(e.body||'')}</div>
+        ${useStruct ? renderStructTemplate(e, struct) : renderFreeform(e)}
       </div>`;
+
+    setTimeout(() => {
+      document.querySelectorAll('.struct-section-textarea').forEach(el => {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      });
+    }, 10);
+  }
+
+  function renderStructTemplate(e, struct) {
+    if (!e.struct) e.struct = {};
+    const initial = (e.title || '?')[0].toUpperCase();
+    const portrait = struct.hasPortrait
+      ? `<div class="struct-header-portrait"><div class="struct-portrait">${initial}</div></div>`
+      : '';
+    const stats = struct.stats.map(s => `
+      <div class="struct-stat">
+        <div class="struct-stat-label">${s.label}</div>
+        <input class="struct-stat-input" type="text" placeholder="${s.placeholder}" value="${esc(e.struct[s.key]||'')}" oninput="updStruct('${s.key}',this.value)"/>
+      </div>`).join('');
+    const sections = struct.sections.map(s => `
+      <div>
+        <div class="struct-section-label">${s.label}</div>
+        <textarea class="struct-section-textarea" placeholder="${esc(s.placeholder)}" oninput="updStruct('${s.key}',this.value);autoGrow(this)">${esc(e.struct[s.key]||'')}</textarea>
+      </div>`).join('');
+    return `
+      <div class="struct-template">
+        ${portrait}
+        <div class="struct-mode-toggle">
+          <button class="markdown-toggle" onclick="toggleFreeform()">Switch to freeform</button>
+        </div>
+        <div class="struct-stats">${stats}</div>
+        <div class="struct-divider"></div>
+        <div class="struct-sections">${sections}</div>
+      </div>`;
+  }
+
+  function renderFreeform(e) {
+    const hasStruct = !!STRUCT_TEMPLATES[e.category];
+    const switchBtn = hasStruct
+      ? `<div class="struct-mode-toggle"><button class="markdown-toggle" onclick="toggleFreeform()">Switch to structured</button></div>`
+      : '';
+    return `
+      ${switchBtn}
+      <div class="markdown-toolbar">
+        <span class="md-spacer"></span>
+        <button class="markdown-toggle" id="markdownToggle" onclick="toggleMarkdown()">${e.preview ? 'Edit' : 'Preview'}</button>
+      </div>
+      <textarea class="entry-body ${e.preview ? 'hidden' : ''}" id="entryBody" placeholder="Write here…" oninput="upd('body',this.value)">${esc(e.body||'')}</textarea>
+      <div class="markdown-preview ${e.preview ? '' : 'hidden'}" id="markdownPreview">${renderMarkdown(e.body||'')}</div>`;
+  }
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function updStruct(key, value) {
+    const e = entries.find(x => x.id === currentId);
+    if (!e) return;
+    if (!e.struct) e.struct = {};
+    e.struct[key] = value;
+    e.updated = Date.now();
+    e.body = Object.values(e.struct).filter(Boolean).join('\n\n');
+  }
+
+  function toggleFreeform() {
+    const e = entries.find(x => x.id === currentId);
+    if (!e) return;
+    e.freeform = !e.freeform;
+    openEntry(e.id);
   }
 
   function updateStarterVisibility() {
@@ -626,11 +694,10 @@ function toggleMarkdown() {
     if (!e) return;
     const oldCat = e.category;
     e[field] = value; e.updated = Date.now();
-    if (field === 'title') renderSidebar();
+    if (field === 'title') { renderSidebar(); return; }
     if (field === 'category' && oldCat !== value) {
-      const wasStruct = STRUCT_TEMPLATES[oldCat] && !e.freeform;
-      const isStruct = STRUCT_TEMPLATES[value] && !e.freeform;
-      if (wasStruct !== isStruct) openEntry(e.id);
+      renderSidebar();
+      openEntry(e.id);
     }
   }
 
