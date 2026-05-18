@@ -67,7 +67,8 @@
 
   .main-toolbar { padding: 18px 36px; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
   .toolbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
-  select.action-btn { padding: 6px 28px 6px 13px; margin-right: 8px; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none' stroke='%23909090' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px; }
+  select.action-btn { padding: 6px 28px 6px 13px; margin-right: 8px; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none' stroke='%23909090' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px; color: var(--text-secondary); }
+  select.action-btn option { background: var(--surface); color: var(--text); }
   .entry-title-input { font-family: 'Inter', -apple-system, sans-serif; font-size: 20px; font-weight: 500; border: none; outline: none; color: var(--text); background: transparent; letter-spacing: -0.3px; flex: 1; }
   .entry-title-input::placeholder { color: var(--text-dim); }
   .toolbar-right { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
@@ -381,7 +382,7 @@
         { key: 'history', label: 'History', placeholder: 'How did this faction come to be?' },
         { key: 'purpose', label: 'Purpose', placeholder: 'What do they stand for?' },
         { key: 'cohesion', label: 'What holds them together', placeholder: 'Loyalty, fear, belief — what keeps them unified?' },
-        { key: 'goals', label: 'What they want', placeholder: 'What do they want that they don\'t have yet?' },
+        { key: 'goals', label: 'What they want', placeholder: "What do they want that they don't have yet?" },
         { key: 'enemies', label: 'Enemies', placeholder: 'Who are they against and why?' },
         { key: 'members', label: 'Notable members', placeholder: 'Who defines this faction?' },
         { key: 'notes', label: 'Notes', placeholder: 'Anything else worth knowing.' }
@@ -645,11 +646,22 @@ function toggleMarkdown() {
     entries.unshift(e); save(); openEntry(e.id);
   }
 
-  function deleteEntry(id) {
+  async function deleteEntry(id) {
     if (!confirm('Delete this entry?')) return;
     entries = entries.filter(x => x.id !== id);
     if (currentId === id) currentId = null;
-    save(); renderAll(); if (!currentId) showBrowse();
+    saveLocal();
+    renderAll();
+    if (!currentId) showBrowse();
+    // Delete from cloud
+    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+      try {
+        const { error } = await db.from('entries').delete().eq('id', id);
+        if (error) console.error('Cloud delete error:', error);
+      } catch (err) {
+        console.error('Cloud delete error:', err);
+      }
+    }
   }
 
   function openCategoryModal() {
