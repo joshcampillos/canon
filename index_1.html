@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a1a; --surface: #242424; --surface-2: #2e2e2e;
+    --border: #383838; --text: #ececec; --text-secondary: #909090;
+    --text-dim: #555555; --accent: #ececec; --sidebar-width: 220px;
+    --template-q: #505050;
+  }
+  body.light {
+    --bg: #f5f5f3; --surface: #ffffff; --surface-2: #f0eeeb;
+    --border: #e0deda; --text: #1a1917; --text-secondary: #6b6860;
+    --text-dim: #b0ada8; --accent: #1a1917; --template-q: #b0ada8;
+  }
+
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; font-size: 14px; transition: background 0.2s, color 0.2s; }
+
+  .sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-header { padding: 24px 20px 24px; }
+  .app-title { font-family: 'Inter', -apple-system, sans-serif; font-size: 24px; font-weight: 500; letter-spacing: -0.5px; color: var(--text); }
+
+  .search-wrap { padding: 14px 20px 8px; }
+  .search-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; font-family: 'Inter', -apple-system, sans-serif; font-size: 12px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .search-input:focus { border-color: var(--text-secondary); }
+  .search-input::placeholder { color: var(--text-dim); }
+
+  .nav-section { padding: 12px 0 16px; }
+  .nav-label { font-size: 10px; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase; padding: 0 20px 8px; }
+  .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 20px; cursor: pointer; transition: background 0.1s; border-left: 2px solid transparent; font-size: 13px; color: var(--text-secondary); position: relative; }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item.active { background: var(--surface-2); border-left-color: var(--accent); color: var(--text); }
+  .nav-count { font-size: 11px; color: var(--text-dim); background: var(--bg); border-radius: 10px; padding: 1px 6px; }
+  .nav-item.active .nav-count { color: var(--text-secondary); }
+  .nav-item-delete { opacity: 0; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 4px; margin-left: 4px; border-radius: 4px; display: flex; align-items: center; transition: opacity 0.15s, color 0.15s; }
+  .nav-item:hover .nav-item-delete { opacity: 1; }
+  .nav-item-delete:hover { color: #c06060; }
+
+  .add-category-btn { display: flex; align-items: center; padding: 7px 20px; cursor: pointer; font-size: 12px; color: var(--text-dim); transition: color 0.15s; }
+  .add-category-btn:hover { color: var(--text-secondary); }
+
+  .entry-list { flex: 1; overflow-y: auto; padding: 0; }
+  .entry-list::-webkit-scrollbar { width: 3px; }
+  .entry-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .entry-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; cursor: pointer; transition: background 0.1s; border-left: 2px solid transparent; }
+  .entry-item:hover { background: var(--surface-2); }
+  .entry-item.active { background: var(--surface-2); border-left-color: var(--accent); }
+  .entry-item-text { flex: 1; min-width: 0; }
+  .entry-item-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-item-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .entry-delete-btn { opacity: 0; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: opacity 0.15s, color 0.15s; flex-shrink: 0; display: flex; align-items: center; }
+  .entry-item:hover .entry-delete-btn { opacity: 1; }
+  .entry-delete-btn:hover { color: #c06060; }
+
+  .sidebar-footer { padding: 16px 20px; }
+  .theme-btn { width: 100%; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 9px; font-family: 'Inter', -apple-system, sans-serif; font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .theme-btn:hover { color: var(--text); border-color: var(--text-secondary); }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .main-toolbar { padding: 18px 36px; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+  .toolbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+  select.action-btn { padding: 6px 28px 6px 13px; margin-right: 8px; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none' stroke='%23909090' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px; }
+  .entry-title-input { font-family: 'Inter', -apple-system, sans-serif; font-size: 20px; font-weight: 500; border: none; outline: none; color: var(--text); background: transparent; letter-spacing: -0.3px; flex: 1; }
+  .entry-title-input::placeholder { color: var(--text-dim); }
+  .toolbar-right { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+  .action-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 13px; font-family: 'Inter', -apple-system, sans-serif; font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .action-btn:hover { border-color: var(--text-secondary); color: var(--text); }
+  .action-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 500; }
+  .action-btn.primary:hover { opacity: 0.85; }
+  .action-btn.danger:hover { border-color: #8b3a3a; color: #c06060; }
+  .action-btn.icon-btn { padding: 6px 10px; font-size: 14px; }
+  .action-btn.icon-btn.active { background: var(--surface-2); border-color: var(--text-secondary); color: var(--text); }
+
+  .content-toolbar { padding: 14px 36px 10px; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+  .content-toolbar-title { font-size: 13px; color: var(--text-secondary); }
+  .view-toggle { display: flex; gap: 6px; }
+
+  .main-content { flex: 1; overflow-y: auto; }
+  .main-content::-webkit-scrollbar { width: 3px; }
+  .main-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .entry-body { width: 100%; min-height: calc(100vh - 160px); border: none; outline: none; font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; line-height: 1.75; color: var(--text); background: transparent; resize: none; padding: 28px 36px; display: block; }
+  .entry-body::placeholder { color: var(--text-dim); }
+  .entry-body.hidden, .markdown-preview.hidden, .template-starter.hidden { display: none; }
+
+  .markdown-toolbar { padding: 16px 36px 0; display: flex; align-items: center; }
+  .md-spacer { flex: 1; }
+  .markdown-toggle { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font-family: 'Inter', -apple-system, sans-serif; font-size: 11px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .markdown-toggle:hover { color: var(--text); border-color: var(--text-secondary); }
+
+  .markdown-preview { padding: 16px 36px 36px; font-size: 14px; line-height: 1.75; color: var(--text); }
+  .markdown-preview h1 { font-family: Georgia, serif; font-size: 24px; font-weight: 500; margin: 24px 0 12px; color: var(--text); }
+  .markdown-preview h2 { font-family: Georgia, serif; font-size: 20px; font-weight: 500; margin: 20px 0 10px; color: var(--text); }
+  .markdown-preview h3 { font-family: Georgia, serif; font-size: 17px; font-weight: 500; margin: 18px 0 8px; color: var(--text); }
+  .markdown-preview p { margin: 0 0 14px; }
+  .markdown-preview ul { margin: 0 0 14px; padding-left: 24px; }
+  .markdown-preview li { margin-bottom: 4px; }
+  .markdown-preview strong { font-weight: 500; color: var(--text); }
+  .markdown-preview em { font-style: italic; }
+  .markdown-preview blockquote { border-left: 2px solid var(--border); padding-left: 16px; margin: 14px 0; color: var(--text-secondary); font-style: italic; }
+
+  .template-starter { padding: 60px 36px 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+  .template-starter-label { font-family: Georgia, serif; font-size: 18px; font-style: italic; color: var(--text-secondary); }
+  .template-starter-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .template-starter-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 16px; font-family: 'Inter', -apple-system, sans-serif; font-size: 13px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .template-starter-btn:hover { border-color: var(--text-secondary); color: var(--text); }
+  .template-starter-blank { color: var(--text-dim); border-style: dashed; }
+  .template-starter-blank:hover { color: var(--text-secondary); }
+  .template-starter.hidden { display: none; }
+
+  /* Template insertion dropdown */
+  /* Gallery */
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 28px 36px; }
+  .gallery-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; cursor: pointer; transition: border-color 0.15s, background 0.15s; display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .gallery-card:hover { border-color: var(--text-secondary); background: var(--surface-2); }
+  .gallery-card-delete { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s; padding: 4px; border-radius: 4px; display: flex; align-items: center; }
+  .gallery-card:hover .gallery-card-delete { opacity: 1; }
+  .gallery-card-delete:hover { color: #c06060; }
+  .gallery-card-initial { width: 40px; height: 40px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 18px; color: var(--text-secondary); margin-bottom: 4px; }
+  .gallery-card-title { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gallery-card-meta { font-size: 11px; color: var(--text-secondary); }
+  .gallery-card-preview { font-size: 11px; color: var(--text-dim); line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding-top: 100px; }
+  .empty-state-title { font-family: Georgia, serif; font-size: 19px; font-style: italic; color: var(--text-secondary); }
+  .empty-state-sub { font-size: 12px; color: var(--text-dim); }
+  .empty-list { padding: 20px; color: var(--text-secondary); font-size: 12px; text-align: center; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 32px; right: 32px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 28px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: opacity 0.3s, transform 0.3s; z-index: 100; }
+  .fab:hover { opacity: 0.85; transform: scale(1.05); }
+  .fab.hidden { opacity: 0; pointer-events: none; transform: scale(0.9); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 10px; padding: 24px; min-width: 320px; border: 1px solid var(--border); }
+  .modal-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 14px; }
+  .modal-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-family: 'Inter', -apple-system, sans-serif; font-size: 13px; color: var(--text); outline: none; margin-bottom: 16px; }
+  .modal-input:focus { border-color: var(--text-secondary); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Mobile responsive */
+  .mobile-menu-btn { display: none; }
+  .sidebar-overlay { display: none; }
+
+  @media (max-width: 768px) {
+    body { font-size: 14px; }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 150;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 140;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .sidebar-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .mobile-menu-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    .main { width: 100%; }
+    .main-toolbar { padding: 14px 20px; flex-wrap: wrap; gap: 10px; }
+    .toolbar-left { width: 100%; }
+    .toolbar-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+    .entry-title-input { font-size: 18px; }
+    .content-toolbar { padding: 12px 20px 8px; }
+    .gallery-grid { padding: 20px; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .entry-body { padding: 20px; min-height: calc(100vh - 220px); }
+    .markdown-preview { padding: 16px 20px 36px; }
+    .markdown-toolbar { padding: 12px 20px 0; }
+    .fab { bottom: 20px; right: 20px; width: 48px; height: 48px; font-size: 24px; }
+    .action-btn { padding: 5px 10px; font-size: 11px; }
+    select.action-btn { padding: 5px 24px 5px 10px; }
+    .gallery-card { padding: 16px; }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="app-title">Canon</div>
+  </div>
+  <div class="search-wrap">
+    <input class="search-input" type="text" placeholder="Search…" id="searchInput" oninput="renderAll()">
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Library</div>
+    <div id="navItems"></div>
+    <div class="add-category-btn" onclick="openCategoryModal()">+ Add category</div>
+  </div>
+  <div class="nav-label">Recents</div>
+  <div class="entry-list" id="entryList"></div>
+  <div class="sidebar-footer">
+    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-bottom:8px;" id="syncStatus">Connecting…</div>
+    <button class="theme-btn" onclick="toggleTheme()">
+      <span id="themeBtnLabel">Switch to Light Mode</span>
+    </button>
+  </div>
+</div>
+
+<div class="main" id="mainArea">
+  <div class="empty-state">
+    <div class="empty-state-title">Your world awaits.</div>
+    <div class="empty-state-sub">Create a new entry or select one to begin.</div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="newEntry()" title="New Entry">+</button>
+
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal">
+    <div class="modal-title">New category</div>
+    <input type="text" class="modal-input" id="categoryInput" placeholder="Category name…" onkeydown="if(event.key==='Enter')addCategory();if(event.key==='Escape')closeCategoryModal()">
+    <div class="modal-actions">
+      <button class="action-btn" onclick="closeCategoryModal()">Cancel</button>
+      <button class="action-btn primary" onclick="addCategory()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'canon_v1';
+  const CATEGORIES_KEY = 'canon_categories_v1';
+  const DEFAULT_CATEGORIES = ['World','Map','Characters','Factions','Lore','Species','Documents'];
+
+  let entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let customCategories = JSON.parse(localStorage.getItem(CATEGORIES_KEY) || '[]');
+  let currentId = null;
+  let currentCategory = 'all';
+  let viewMode = 'list';
+  let isDark = true;
+
+  const TEMPLATES = {
+    Character: [
+      "Who are they in one sentence?",
+      "What do they look like — the first thing someone notices?",
+      "Where do they come from? What shaped them?",
+      "What can they do that no one else can?",
+      "What do they want more than anything?",
+      "What are they afraid of?",
+      "What makes them different from everyone around them?",
+      "Who are they becoming?",
+      "How do others see them versus how they see themselves?",
+      "Notes — relationships, arc beats, anything else."
+    ],
+    Faction: [
+      "What is this faction and what do they stand for?",
+      "Who leads them, and how did they come to power?",
+      "What do they control — territory, resources, influence?",
+      "What do they want that they don't have yet?",
+      "Who are their enemies and why?",
+      "What holds them together — loyalty, fear, belief?",
+      "Notes."
+    ],
+    Species: [
+      "What are they — describe them in one sentence.",
+      "Where do they come from? How did they come to exist?",
+      "What do they look like?",
+      "What can they do that humans cannot?",
+      "What are their weaknesses?",
+      "How do they live — culture, society, beliefs?",
+      "How do they relate to other species?",
+      "Notable members."
+    ],
+    Lore: [
+      "What happened, in one sentence?",
+      "When did this occur — what era or timeline?",
+      "Who were the key figures?",
+      "What caused it?",
+      "What did it change? What are the consequences?",
+      "What do people believe about it versus what actually happened?",
+      "Notes."
+    ],
+    World: [
+      "Describe this world in two sentences.",
+      "What era or timeline does this cover?",
+      "What does the geography look like?",
+      "Who holds power and how?",
+      "What is the tone — what does it feel like to live here?",
+      "Notes."
+    ],
+    Place: [
+      "What is this place?",
+      "Where is it — what region or world does it belong to?",
+      "What does it look like?",
+      "Why does it matter to the story?",
+      "What connects it to other places?",
+      "Notes."
+    ]
+  };
+
+  const TRASH_SVG = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 14 4"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M6 7v5M10 7v5"/><path d="M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/></svg>';
+
+  function getAllCategories() { return [...DEFAULT_CATEGORIES, ...customCategories]; }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+  function saveCategories() { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(customCategories)); }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+  }
+
+  // Close sidebar when category clicked on mobile
+  function closeMobileSidebar() {
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('open');
+    }
+  }
+
+  function toggleTheme() {
+    isDark = !isDark;
+    document.body.classList.toggle('light', !isDark);
+    document.getElementById('themeBtnLabel').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  }
+
+  function getFiltered() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    return entries.filter(e => {
+      const matchCat = currentCategory === 'all' || e.category === currentCategory;
+      const matchSearch = !q || (e.title||'').toLowerCase().includes(q) || (e.body||'').toLowerCase().includes(q);
+      return matchCat && matchSearch;
+    });
+  }
+
+  function setCategory(cat) {
+    currentCategory = cat;
+    currentId = null;
+    renderSidebar();
+    showBrowse();
+    closeMobileSidebar();
+  }
+
+  function renderNav() {
+    const navItems = document.getElementById('navItems');
+    const allCats = getAllCategories();
+    const allItem = `<div class="nav-item ${currentCategory==='all'?'active':''}" onclick="setCategory('all')"><span>All</span><span class="nav-count">${entries.length}</span></div>`;
+    const items = allCats.map(cat => {
+      const count = entries.filter(e => e.category === cat).length;
+      const isCustom = customCategories.includes(cat);
+      const deleteBtn = isCustom ? `<button class="nav-item-delete" onclick="event.stopPropagation();deleteCategory('${cat}')" title="Remove category">${TRASH_SVG}</button>` : '';
+      return `<div class="nav-item ${currentCategory===cat?'active':''}" onclick="setCategory('${cat}')">
+        <span>${cat}</span>
+        <span style="display:flex;align-items:center;gap:4px;">${deleteBtn}<span class="nav-count">${count}</span></span>
+      </div>`;
+    }).join('');
+    navItems.innerHTML = allItem + items;
+  }
+
+  function renderSidebar() {
+    renderNav();
+    const list = document.getElementById('entryList');
+    const filtered = getFiltered();
+    if (filtered.length === 0) { list.innerHTML = `<div class="empty-list">No entries.</div>`; return; }
+    list.innerHTML = filtered.map(e => `
+      <div class="entry-item ${e.id === currentId ? 'active' : ''}" onclick="openEntry('${e.id}')">
+        <div class="entry-item-text">
+          <div class="entry-item-title">${e.title || 'Untitled'}</div>
+          <div class="entry-item-meta">${new Date(e.updated).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+        </div>
+        <button class="entry-delete-btn" onclick="event.stopPropagation();deleteEntry('${e.id}')" title="Delete">${TRASH_SVG}</button>
+      </div>`).join('');
+  }
+
+  function renderAll() { renderSidebar(); if (!currentId) showBrowse(); }
+
+  function showBrowse() {
+    const filtered = getFiltered();
+    const catLabel = currentCategory === 'all' ? 'All Entries' : currentCategory;
+    const tl = `<button class="action-btn icon-btn ${viewMode==='list'?'active':''}" onclick="setView('list')">☰</button>`;
+    const tg = `<button class="action-btn icon-btn ${viewMode==='gallery'?'active':''}" onclick="setView('gallery')">⊞</button>`;
+
+    if (viewMode === 'gallery') {
+      const cards = filtered.length === 0
+        ? `<div style="grid-column:1/-1;text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">No entries.</div>`
+        : filtered.map(e => `
+          <div class="gallery-card" onclick="openEntry('${e.id}')">
+            <button class="gallery-card-delete" onclick="event.stopPropagation();deleteEntry('${e.id}')" title="Delete">${TRASH_SVG}</button>
+            <div class="gallery-card-initial">${(e.title||'?')[0].toUpperCase()}</div>
+            <div class="gallery-card-title">${e.title||'Untitled'}</div>
+            <div class="gallery-card-meta">${e.category||''}</div>
+            <div class="gallery-card-preview">${(e.body||'').replace(/\n/g,' ').substring(0,80)}</div>
+          </div>`).join('');
+      document.getElementById('mainArea').innerHTML = `
+        <div class="content-toolbar"><div style="display:flex;align-items:center;"><button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg></button><span class="content-toolbar-title">${catLabel} — ${filtered.length} entr${filtered.length===1?'y':'ies'}</span></div><div class="view-toggle">${tl}${tg}</div></div>
+        <div class="gallery-grid">${cards}</div>`;
+    } else {
+      const rows = filtered.length === 0
+        ? `<div style="padding:40px;text-align:center;color:var(--text-dim);font-size:13px;">No entries.</div>`
+        : filtered.map(e => {
+            const initial = (e.title||'?')[0].toUpperCase();
+            const preview = (e.body||'').replace(/\n/g,' ').substring(0,60);
+            const date = new Date(e.updated).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            return `<div onclick="openEntry('${e.id}')" style="display:flex;align-items:center;gap:16px;padding:14px 36px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+              <div style="width:36px;height:36px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:16px;color:var(--text-secondary);flex-shrink:0;">${initial}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.title||'Untitled'}</div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${e.category||''} · ${date}</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-dim);max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
+            </div>`;
+          }).join('');
+      document.getElementById('mainArea').innerHTML = `
+        <div class="content-toolbar"><div style="display:flex;align-items:center;"><button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg></button><span class="content-toolbar-title">${catLabel} — ${filtered.length} entr${filtered.length===1?'y':'ies'}</span></div><div class="view-toggle">${tl}${tg}</div></div>
+        <div>${rows}</div>`;
+    }
+  }
+
+  function setView(mode) { viewMode = mode; currentId = null; renderAll(); }
+
+  function openEntry(id) {
+    currentId = id;
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    if (e.preview === undefined) e.preview = false;
+    closeMobileSidebar();
+    renderSidebar();
+    const allCats = getAllCategories();
+    const tl = `<button class="action-btn icon-btn ${viewMode==='list'?'active':''}" onclick="setView('list')">☰</button>`;
+    const tg = `<button class="action-btn icon-btn ${viewMode==='gallery'?'active':''}" onclick="setView('gallery')">⊞</button>`;
+
+    document.getElementById('mainArea').innerHTML = `
+      <div class="main-toolbar">
+        <div class="toolbar-left">
+          <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+          </button>
+          <input class="entry-title-input" type="text" placeholder="Entry title…" value="${esc(e.title)}" oninput="upd('title',this.value)"/>
+          <select class="action-btn" onchange="upd('category',this.value);renderSidebar()">
+            <option value="">Uncategorized</option>
+            ${allCats.map(c => '<option value="' + c + '" ' + (e.category===c?'selected':'') + '>' + c + '</option>').join('')}
+          </select>
+        </div>
+        <div class="toolbar-right">
+          ${tl}${tg}
+          <button class="action-btn danger" onclick="deleteEntry('${e.id}')">Delete</button>
+          <button class="action-btn" onclick="exportAll()">Export</button>
+          <button class="action-btn primary" onclick="saveEntry()">Save</button>
+        </div>
+      </div>
+      <div class="main-content" id="mainContent">
+<div class="markdown-toolbar">
+          <span class="md-spacer"></span>
+          <button class="markdown-toggle" id="markdownToggle" onclick="toggleMarkdown()">${e.preview ? 'Edit' : 'Preview'}</button>
+        </div>
+        <textarea class="entry-body ${e.preview ? 'hidden' : ''}" id="entryBody" placeholder="Write here…" oninput="upd('body',this.value);updateStarterVisibility()">${esc(e.body||'')}</textarea>
+        <div class="markdown-preview ${e.preview ? '' : 'hidden'}" id="markdownPreview">${renderMarkdown(e.body||'')}</div>
+      </div>`;
+  }
+
+  function updateStarterVisibility() {
+    const starter = document.getElementById('templateStarter');
+    const textarea = document.getElementById('entryBody');
+    if (!starter || !textarea) return;
+    if (textarea.value.trim() === '') {
+      starter.classList.remove('hidden');
+    } else {
+      starter.classList.add('hidden');
+    }
+  }
+
+function toggleMarkdown() {
+    const e = entries.find(x => x.id === currentId);
+    if (!e) return;
+    e.preview = !e.preview;
+    const textarea = document.getElementById('entryBody');
+    const preview = document.getElementById('markdownPreview');
+    const btn = document.getElementById('markdownToggle');
+    if (e.preview) {
+      preview.innerHTML = renderMarkdown(textarea.value);
+      textarea.classList.add('hidden');
+      preview.classList.remove('hidden');
+      btn.textContent = 'Edit';
+    } else {
+      textarea.classList.remove('hidden');
+      preview.classList.add('hidden');
+      btn.textContent = 'Preview';
+    }
+  }
+
+  function renderMarkdown(text) {
+    if (!text) return '<div style="color:var(--text-dim);font-style:italic;">Nothing to preview yet.</div>';
+    let html = esc(text);
+    // Headers
+    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    // Bold and italic
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Bullet lists
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.+<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+    // Blockquotes
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    // Paragraphs (double newlines)
+    html = html.split(/\n\n+/).map(p => {
+      if (p.match(/^<(h[1-3]|ul|blockquote)/)) return p;
+      return p.trim() ? '<p>' + p.replace(/\n/g, '<br>') + '</p>' : '';
+    }).join('');
+    return html;
+  }
+
+  function insertTemplate(name) {
+    const questions = TEMPLATES[name];
+    if (!questions) return;
+    const e = entries.find(x => x.id === currentId);
+    if (!e) return;
+    const template = questions.map(q => q + '\n\n').join('\n');
+    const textarea = document.getElementById('entryBody');
+    const existing = textarea.value;
+    const newValue = existing ? existing + '\n\n' + template : template;
+    textarea.value = newValue;
+    e.body = newValue;
+    e.updated = Date.now();
+    updateStarterVisibility();
+    textarea.focus();
+  }
+
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function upd(field, value) {
+    const e = entries.find(x => x.id === currentId);
+    if (!e) return;
+    e[field] = value; e.updated = Date.now();
+    if (field === 'title') renderSidebar();
+  }
+
+  function saveEntry() {
+    save(); renderSidebar();
+    const btn = document.querySelector('.action-btn.primary');
+    if (btn) { btn.textContent = 'Saved'; setTimeout(() => btn.textContent = 'Save', 1200); }
+  }
+
+  function newEntry() {
+    const cat = currentCategory === 'all' ? '' : currentCategory;
+    const e = { id: crypto.randomUUID(), title: '', category: cat, body: '', preview: false, created: Date.now(), updated: Date.now() };
+    entries.unshift(e); save(); openEntry(e.id);
+  }
+
+  function deleteEntry(id) {
+    if (!confirm('Delete this entry?')) return;
+    entries = entries.filter(x => x.id !== id);
+    if (currentId === id) currentId = null;
+    save(); renderAll(); if (!currentId) showBrowse();
+  }
+
+  function openCategoryModal() {
+    document.getElementById('categoryModal').classList.add('open');
+    setTimeout(() => document.getElementById('categoryInput').focus(), 50);
+  }
+
+  function closeCategoryModal() {
+    document.getElementById('categoryModal').classList.remove('open');
+    document.getElementById('categoryInput').value = '';
+  }
+
+  function addCategory() {
+    const input = document.getElementById('categoryInput');
+    const name = input.value.trim();
+    if (!name) return;
+    if (getAllCategories().includes(name)) { alert('Category already exists.'); return; }
+    customCategories.push(name);
+    saveCategories();
+    closeCategoryModal();
+    renderSidebar();
+  }
+
+  function deleteCategory(cat) {
+    const count = entries.filter(e => e.category === cat).length;
+    const msg = count > 0
+      ? `Remove "${cat}"? ${count} entr${count===1?'y':'ies'} will become uncategorized.`
+      : `Remove "${cat}"?`;
+    if (!confirm(msg)) return;
+    entries.forEach(e => { if (e.category === cat) e.category = ''; });
+    customCategories = customCategories.filter(c => c !== cat);
+    if (currentCategory === cat) currentCategory = 'all';
+    save(); saveCategories(); renderSidebar(); showBrowse();
+  }
+
+  function exportAll() {
+    const blob = new Blob([JSON.stringify({entries, customCategories}, null, 2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'canon_export.json'; a.click();
+  }
+
+  // FAB typing detection
+  let typingTimer;
+  const fab = document.getElementById('fab');
+  document.addEventListener('input', () => {
+    fab.classList.add('hidden');
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => fab.classList.remove('hidden'), 1200);
+  });
+
+  // ── Supabase sync ──────────────────────────────────────────
+  const SUPABASE_URL = 'https://ukrxddumuzspydsbecdk.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_jBNn5ck-1lmczaG4m0LXRw_SoSDrnD8';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let syncStatus = 'idle'; // idle | syncing | error
+
+  function setSyncStatus(status, msg) {
+    syncStatus = status;
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    const labels = { idle: '✓ Synced', syncing: 'Syncing…', error: '⚠ Sync error' };
+    const colors = { idle: 'var(--text-dim)', syncing: 'var(--text-secondary)', error: '#c06060' };
+    el.textContent = labels[status] || msg;
+    el.style.color = colors[status] || 'var(--text-dim)';
+  }
+
+  async function syncToCloud() {
+    if (SUPABASE_URL === 'YOUR_SUPABASE_URL') return;
+    setSyncStatus('syncing');
+    try {
+      const { error } = await db.from('entries').upsert(
+        entries.map(e => ({
+          id: e.id,
+          title: e.title || '',
+          category: e.category || '',
+          body: e.body || '',
+          preview: e.preview || false,
+          created: e.created,
+          updated: e.updated
+        })),
+        { onConflict: 'id' }
+      );
+      if (error) throw error;
+      setSyncStatus('idle');
+    } catch (err) {
+      console.error('Sync error:', err);
+      setSyncStatus('error');
+    }
+  }
+
+  async function loadFromCloud() {
+    if (SUPABASE_URL === 'YOUR_SUPABASE_URL') return;
+    setSyncStatus('syncing');
+    try {
+      const { data, error } = await db.from('entries').select('*').order('updated', { ascending: false });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        entries = data;
+        save();
+        renderAll();
+      }
+      setSyncStatus('idle');
+    } catch (err) {
+      console.error('Load error:', err);
+      setSyncStatus('error');
+    }
+  }
+
+  // Override save to also sync
+  const _save = save;
+  function save() {
+    _save();
+    clearTimeout(window._syncTimer);
+    window._syncTimer = setTimeout(syncToCloud, 1500);
+  }
+
+  // Load from cloud on startup
+  loadFromCloud();
+
+  renderAll();
+</script>
+</body>
+</html>
