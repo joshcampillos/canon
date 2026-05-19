@@ -207,6 +207,8 @@
     .action-btn { padding: 5px 10px; font-size: 11px; }
     select.action-btn { padding: 5px 24px 5px 10px; }
     .gallery-card { padding: 16px; }
+    .toolbar-left { flex-wrap: wrap; align-items: center; }
+    .toolbar-left select.action-btn { width: 100%; margin-right: 0; margin-top: 2px; }
   }
 
   /* Structured templates */
@@ -892,15 +894,23 @@ function toggleMarkdown() {
     setSyncStatus('syncing');
     try {
       const { error } = await db.from('entries').upsert(
-        entries.map(e => ({
-          id: e.id,
-          title: e.title || '',
-          category: e.category || '',
-          body: e.body || '',
-          preview: e.preview || false,
-          created: e.created,
-          updated: e.updated
-        })),
+        entries.map(e => {
+          // Encode struct as JSON appended to body with a sentinel so it
+          // survives the cloud round-trip without a schema change.
+          let cloudBody = e.body || '';
+          if (e.struct && Object.keys(e.struct).length > 0) {
+            cloudBody += '\n\n__CANON_STRUCT__' + JSON.stringify(e.struct);
+          }
+          return {
+            id: e.id,
+            title: e.title || '',
+            category: e.category || '',
+            body: cloudBody,
+            preview: e.preview || false,
+            created: e.created,
+            updated: e.updated
+          };
+        }),
         { onConflict: 'id' }
       );
       if (error) throw error;
@@ -918,7 +928,15 @@ function toggleMarkdown() {
       const { data, error } = await db.from('entries').select('*').order('updated', { ascending: false });
       if (error) throw error;
       if (data && data.length > 0) {
-        entries = data;
+        // Decode struct from body sentinel if present
+        entries = data.map(e => {
+          if (e.body && e.body.includes('\n\n__CANON_STRUCT__')) {
+            const parts = e.body.split('\n\n__CANON_STRUCT__');
+            e.body = parts[0];
+            try { e.struct = JSON.parse(parts[1]); } catch(_) { e.struct = {}; }
+          }
+          return e;
+        });
         save();
         renderAll();
       }
