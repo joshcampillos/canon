@@ -794,6 +794,9 @@ function toggleMarkdown() {
         btn.textContent = 'Saved';
         setTimeout(() => btn.textContent = 'Save', 1200);
       }
+      // Trigger cloud sync after local save
+      clearTimeout(window._syncTimer);
+      window._syncTimer = setTimeout(syncToCloud, 1500);
     }, 1000);
   }
 
@@ -933,12 +936,13 @@ function toggleMarkdown() {
       if (data && data.length > 0) {
         // Decode struct from body sentinel if present
         entries = data.map(e => {
-          if (e.body && e.body.includes('\n\n__CANON_STRUCT__')) {
-            const parts = e.body.split('\n\n__CANON_STRUCT__');
-            e.body = parts[0];
-            try { e.struct = JSON.parse(parts[1]); } catch(_) { e.struct = {}; }
+          let mapped = { ...e };
+          if (mapped.body && mapped.body.includes('\n\n__CANON_STRUCT__')) {
+            const parts = mapped.body.split('\n\n__CANON_STRUCT__');
+            mapped.body = parts[0];
+            try { mapped.struct = JSON.parse(parts[1]); } catch(_) { mapped.struct = {}; }
           }
-          return e;
+          return mapped;
         });
         save();
         renderAll();
